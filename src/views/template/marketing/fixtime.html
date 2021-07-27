@@ -1,0 +1,103 @@
+<style>
+    .layui-layer-admin .layui-layer-content{
+        padding: 0 20px!important;
+    }
+    .layui-form-item .layui-input-inline{
+        width: 100px;
+    }
+    .layui-upload img{
+        border: 1px solid #ccc;
+    }
+    .del{
+        width: 30px;
+        height: 30px;
+        position: absolute;
+        top: -20px;
+        right: -20px;
+        border-radius: 50%;
+    }
+</style>
+<script type="text/html" template lay-done="layui.data.sendParams(d.params)">
+    <form class="layui-form" action="" style="padding:20px 0">
+        <div class="layui-form-item">
+            <label class="layui-form-label" id="changeTime">选择时间：</label>
+            <div class="layui-input-block">
+            <input type="text" name="time" class="layui-input" id="testTime" placeholder=" 请输入时间">
+            </div>
+        </div>
+        <div class="layui-form-item">
+            <div class="layui-input-block" style="width:200px;margin:0 auto;">
+            <button type="submit" class="layui-btn" style="width:100%;" lay-submit="" lay-filter="submit">确定</button>
+            </div>
+        </div> 
+    </form>  
+</script>
+    <script>
+        layui.data.sendParams = function (params) {
+            layui.use(['admin','element','upload','form','common'], function () {
+                var $ = layui.$;
+                var admin = layui.admin;
+                var element = layui.element;
+                var form = layui.form;
+                var id="";
+				var laydate = layui.laydate;
+				var field = {
+				        start: '',
+				        end: '',
+				}
+				var timeString='';
+                if(params.id){
+                    id=params.id
+                }
+				if(params.yu_ding_time){
+						timeString=layui.common.createTime(params.yu_ding_time/1000)
+						$("#testTime").attr('value',timeString)
+				}   
+				//日期范围
+				laydate.render({
+				    elem: '#testTime',
+				    type: 'datetime',
+				    // range: true,
+				    trigger: 'click',
+				    format: 'yyyy-M-d HH:mm:ss',
+				    change: function(value, date, endDate) {
+				
+				    },
+				    done: function(value, date, endDate) {
+						console.log(date)
+				        if (!value) {
+				            $("input[name=testInput]").val("");
+				            field.start = '';
+				            field.end = '';
+				        } else {
+				            field.start = new Date(value.split('-')[0]).getTime() / 1000;
+				            field.end = new Date(value.split('-')[1]).getTime() / 1000;
+							console.log(field)
+				        }
+				    }
+				});
+                //保存
+                form.on('submit(submit)', function (data) {
+                    data.field.parent=0
+                    data.field.level='1'
+					data.field.yu_ding_time=field.start
+                    data.field.open_index=params.open_index
+                    admin.req({
+                        url: layui.setter.requestUrl + 'api.php?c=group_area/changeGroupAreaOpenTime',
+                        data: data.field,
+                        success: function (res) {
+                            if (res.code == 0) {
+                                layer.msg(res.msg);
+                                layer.closeAll();
+                                parent.layui.table.reload("commentTable");
+                            } else {
+                                layer.msg(res.msg);
+                            }
+                        }
+                    })
+                    return false;
+                })
+            })
+        }
+    </script> 
+

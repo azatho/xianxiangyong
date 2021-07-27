@@ -1,0 +1,170 @@
+<style>
+	.layui-table-cell {
+		display: block;
+		height: auto;
+		line-height: 20px !important;
+	}
+
+	.layui-layer-admin .layui-layer-content {
+		padding: 0 20px;
+	}
+</style>
+<script type="text/html" template lay-done="layui.data.sendParams(d.params)">
+	<form class="layui-form" action="" style="padding:20px 0 0">
+		<div class="layui-form-item">
+			<table class="layui-hide" id="table2" lay-filter="table2"></table>
+		</div>
+		<div class="layui-form-item">
+			<div class="layui-input-block" style="width:200px;margin:0 auto;">
+				<button type="submit" class="layui-btn" style="width:100%;" id="submit" lay-submit
+					lay-filter="submit">确定</button>
+			</div>
+		</div>
+	</form>
+</script>
+<script>
+	layui.data.sendParams = function(params) {
+			layui.use('contlist', layui.factory('contlist')).use(['admin', 'contlist', 'table', 'laydate', 'common',
+					'public',
+					'form'
+				],
+				function() {
+					var $ = layui.$,
+						admin = layui.admin,
+						laydate = layui.laydate,
+						view = layui.view,
+						form = layui.form,
+						table = layui.table;
+					IsshowAnNiu = layui.common.IsshowAnNiu;
+					var menuPermissions = IsshowAnNiu('addviews'); //菜单权限
+					var brand_status = '1';
+					var checkStatus = [];
+					var tool = layui.public.tool;
+					var goodsIndex = params.goods_index
+					var goods_sorts = []
+					var field1 = {
+						goods_index: goodsIndex,
+						goods_sort2: '-1',
+						goods_name: '',
+						type: '2'
+					}
+					form.render()
+
+					//渲染表格数据
+					var render_table = function(data) {
+						table.render({
+								elem: '#table2',
+								url: layui.setter.requestUrl + 'api.php?c=supplier_goods/getSku',
+								where: data,
+								cols: cols = [
+									[{
+										field: 'sku_index',
+										title: 'ID',
+										align: 'center',
+										sort: true,
+										width: 60
+									}, {
+										field: 'sku_name',
+										title: '规格属性',
+										align: 'center',
+										templet: function(d) {
+											return `<div>${d.sku_name.length==0?'无规格':d.sku_name}</div>`
+
+										}
+									}, {
+										field: 'sku_integral_price',
+										title: '所需积分',
+										align: 'center',
+										templet: function(d) {
+											var div = `<div>
+		                                        <input style="text-align:center;width:60px"  onkeyup= 'this.value=this.value.replace(/\D/g,"")'
+		onafterpaste='this.value=this.value.replace(/\D/g,"")''  data-index="${d.sku_index}" class="save3" type="number" value='${d.sku_integral_price/100}'>
+		                                       </div>`
+											return div
+										}
+										},
+										]],
+									page: true,
+									//解决高度自适应固定的列高度不一致
+									done: function(res, curr, count) {
+										$(".layui-table-main  tr").each(function(index, val) {
+											$($(".layui-table-fixed .layui-table-body tbody tr")[
+													index])
+												.height($(val).height());
+										});
+									}
+								});
+						}
+						//先自调用请求渲染数据
+						render_table(field1);
+						
+						$('#submit').on('click', function () {
+						    let arrAll = [];
+							$('.save3').each((index, item) => {
+							    if ($(item).val() == "") {
+							        layer.msg('请输入内容')
+							        return false;
+							    } else {
+							        let arr = {}
+							        arr.sku_index = $(item).attr("data-index");
+							        arr.hot_integral = $(item).val()*100;
+							        arrAll.push(arr)
+							    }
+							})
+							console.log(arrAll)
+						    if (arrAll.length > 0) {
+						        admin.req({
+						            url: layui.setter.requestUrl +
+						                'api.php?c=supplier_goods/addDelHotGoods',
+						            type: 'POST',
+						            data: {
+										goods_index:params.goods_index,
+						                sku_info: arrAll,
+										type:1,
+						            },
+						            success: function (res) {
+						                if (res.code == 0) {
+						                    layer.closeAll()
+						                    layer.msg(res.msg)
+											parent.layui.table.reload("table");
+						                } else {
+						                    layer.msg(res.msg)
+						                }
+						            }
+						        })
+						    }
+						});
+						table.on('tool(table2)', function(obj) { //注：tool table 是 table  lay-filter="对应的值"
+							var data = obj.data; //获得当前行数据
+							var layEvent = obj.event; //获得 lay-event 对应的值
+							if (layEvent == 'enlarge') {
+								tool.lookBigImg(data.goods_icon.split(','));
+							} else if (layEvent == 'add') {
+								admin.req({
+									url: layui.setter.requestUrl +
+										'api.php?c=supplier_goods/addDelHotGoods',
+									data: {
+										goods_index: data.goods_index,
+										type: '1'
+									},
+									success: function(res) {
+										if (res.code == 0) {
+											layer.msg(res.msg)
+											table.reload('table2', {
+												url: layui.setter.requestUrl +
+													'api.php?c=supplier_goods/getHotGoodsList',
+												where: field1,
+												page: {
+													curr: 1 //重新从第 1 页开始
+												},
+											});
+											parent.layui.table.reload("table");
+										}
+									}
+								})
+							}
+						})
+
+					});
+			}
+</script>
